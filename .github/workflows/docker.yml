@@ -1,0 +1,48 @@
+name: docker
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/${{ github.repository }}   # ghcr.io/gaurmudit/open-webui
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=tag                      # v0.11.3-oc.1
+            type=sha,format=short,prefix=sha-        # sha-abc1234
+            type=ref,event=branch                    # main (rolling snapshot)
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64        # our VPS is amd64; add arm64 later if ever needed
+          push: true
+          build-args: BUILD_HASH=${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
