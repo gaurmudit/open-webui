@@ -18,4 +18,4 @@ calls).
 
 | Fork tag | Upstream baseline | Patch contents |
 |---|---|---|
-| `v0.11.3-oc.1` | upstream `v0.11.3` (`2a960a59fe1dbbd35282f0556b3666d81102e781`) | `backend/open_webui/routers/openai.py` — URL-scoped `x-opencode-session` + `gaurs-ow/<BUILD_HASH>` User-Agent injection in `get_headers_and_cookies()` (commit `8bafc6172`). Docker build/publish workflow in `.github/workflows/docker.yml` (commit `3f5f4a7a8`). |
+| `v0.11.3-oc.1` | upstream `v0.11.3` (`2a960a59fe1dbbd35282f0556b3666d81102e781`) | `backend/open_webui/routers/openai.py` — URL-scoped `x-opencode-session` + `gaurs-ow/<BUILD_HASH>` User-Agent injection in `get_headers_and_cookies()` (commit `8bafc6172`). Docker build/publish workflow in `.github/workflows/docker.yml` (commit `3f5f4a7a8`). Dockerfile build fixes for GitHub Actions runners: `ENV NODE_OPTIONS="--max-old-space-size=12288"` (commits `590975aa6` → `7e79afe00`). Release tag HEAD: `7e79afe00`. |
