@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import os
 import re
 from typing import Optional
 from urllib.parse import quote, urlparse
@@ -60,6 +61,12 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
+# --- gaurs-infrastructure: x-opencode-session for opencode.ai ---
+# OpenCode Go/Zen requires a stable per-conversation session id; log-once per
+# user when we fall back to a stable per-user id for anonymous/API-key callers.
+_OC_SESSION_FALLBACK_WARNED: set[str] = set()
+# --- end gaurs-infrastructure ---
 
 
 ##########################################
@@ -216,6 +223,29 @@ async def get_headers_and_cookies(
     if config.get('headers') and isinstance(config.get('headers'), dict):
         custom_headers = await get_custom_headers(config.get('headers'), user, metadata, request=request)
         headers.update(custom_headers)
+
+    # --- gaurs-infrastructure: x-opencode-session for opencode.ai ---------
+    # OpenCode Go/Zen requires a stable per-conversation session id:
+    # https://opencode.ai/docs/go/#where-can-i-use-it
+    if 'opencode.ai' in urlparse(url).netloc:
+        session_id = (metadata or {}).get('chat_id') or ''
+        if not session_id and user:
+            # Anonymous/API-key callers (POST /openai/chat/completions or
+            # /api/v1/chat/completions with no chat_id) have no conversation id.
+            # OW API keys are 1:1 with a user, so a stable per-user id
+            # approximates per-conversation for them.
+            session_id = f'ow-user-{user.id}'
+            if user.id not in _OC_SESSION_FALLBACK_WARNED:
+                _OC_SESSION_FALLBACK_WARNED.add(user.id)
+                log.warning(
+                    'x-opencode-session: request without chat_id; using stable '
+                    'per-user fallback (user=%s)', user.id,
+                )
+        if session_id:
+            headers['x-opencode-session'] = str(session_id)
+        # Identify ourselves per vendor guidance (not a generic aiohttp UA).
+        headers['User-Agent'] = f"gaurs-ow/{os.getenv('BUILD_HASH', 'dev')}"
+    # --- end gaurs-infrastructure -----------------------------------------
 
     return headers, cookies
 
