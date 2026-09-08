@@ -29,8 +29,9 @@ ARG BUILD_HASH
 
 # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
 # gaurs-infrastructure: enabled to fix the frontend vite build OOM on default
-# GitHub Actions runners (2GB default heap < 4GB needed).
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+# GitHub Actions runners. Value matches upstream's own CI injection
+# (docker.yaml sets NODE_OPTIONS=--max-old-space-size=12288 on the node stage).
+ENV NODE_OPTIONS="--max-old-space-size=12288"
 
 WORKDIR /app
 
